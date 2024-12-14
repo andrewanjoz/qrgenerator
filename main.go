@@ -16,14 +16,26 @@ type Page struct {
 func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/generator/", viewCodeHandler)
-	http.ListenAndServe(":8080", nil)
+
+	println("Server starting on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		panic(err)
+	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	p := Page{Title: "QR Code Generator"}
 
-	t, _ := template.ParseFiles("generator.html")
-	t.Execute(w, p)
+	t, err := template.ParseFiles("templates/generator.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := t.Execute(w, p); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func viewCodeHandler(w http.ResponseWriter, r *http.Request) {
