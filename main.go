@@ -3,6 +3,7 @@ package main
 import (
 	"image/png"
 	"net/http"
+	"os"
 	"text/template"
 
 	"github.com/boombuler/barcode"
@@ -17,8 +18,13 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/generator/", viewCodeHandler)
 
-	println("Server starting on :8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // fallback for local development
+	}
+
+	println("Server starting on port", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		panic(err)
 	}
 }
