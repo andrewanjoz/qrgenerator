@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"image/png"
 	"net/http"
 	"os"
@@ -47,8 +49,44 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func viewCodeHandler(w http.ResponseWriter, r *http.Request) {
 	dataString := r.FormValue("dataString")
 
-	qrCode, _ := qr.Encode(dataString, qr.L, qr.Auto)
-	qrCode, _ = barcode.Scale(qrCode, 512, 512)
+	qrCode, err := qr.Encode(dataString, qr.L, qr.Auto)
+	if err != nil {
+		http.Error(w, "Error generating QR code", http.StatusInternalServerError)
+		return
+	}
 
-	png.Encode(w, qrCode)
+	qrCode, err = barcode.Scale(qrCode, 512, 512)
+	if err != nil {
+		http.Error(w, "Error scaling QR code", http.StatusInternalServerError)
+		return
+	}
+
+	// Create a buffer to store the PNG image
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, qrCode); err != nil {
+		http.Error(w, "Error encoding QR code", http.StatusInternalServerError)
+		return
+	}
+
+	// Encode the image as base64
+	qrBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	// Create template data
+	data := struct {
+		QRCode string
+	}{
+		QRCode: qrBase64,
+	}
+
+	// Parse and execute the template
+	t, err := template.ParseFiles("templates/qr.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := t.Execute(w, data); err != nil {
+		http.Error(w, "Template execution error", http.StatusInternalServerError)
+		return
+	}
 }
